@@ -21,6 +21,7 @@ public class Order extends AggregateRoot<OrderId> {
     private OrderStatus orderStatus;
     private List<String> failureMessages;
 
+    /* Initializer Methods */
     public void initializeOrder() {
         setId(new OrderId(UUID.randomUUID()));
         trackingId = new TrackingId(UUID.randomUUID());
@@ -28,11 +29,63 @@ public class Order extends AggregateRoot<OrderId> {
         initializeOrderItems();
     }
 
+    private void initializeOrderItems(){
+        long itemId = 1;
+        for (OrderItem orderItem: items) {
+            orderItem.initializeOrderItem(super.getId(), new OrderItemId(itemId++));
+        }
+    }
+
+    /* State Changing Methods */
+
+    public void pay() {
+        if (orderStatus != OrderStatus.PENDING) {
+         throw new OrderDomainException("Order is not in correct state for payment operation");
+        }
+        orderStatus = OrderStatus.PAID;
+    }
+
+    public void approve() {
+        if(orderStatus != OrderStatus.PAID) {
+            throw new OrderDomainException("Order is not in correct state for approve operation");
+        }
+        orderStatus = OrderStatus.APPROVED;
+    }
+
+    public void initCancel(List<String> failureMessages) {
+        if (orderStatus != OrderStatus.PAID) {
+            throw new OrderDomainException("Order is not in correct state for initCancel operation!");
+        }
+        orderStatus = OrderStatus.CANCELLING;
+        updateFailureMessages(failureMessages);
+    }
+
+    public void cancel(List<String> failureMessages) {
+        if (!(orderStatus == OrderStatus.CANCELLING || orderStatus == OrderStatus.PENDING)) {
+            throw new OrderDomainException("Order is not in correct state for cancel operation!");
+        }
+        orderStatus = OrderStatus.CANCELLED;
+        updateFailureMessages(failureMessages);
+    }
+
+    private void updateFailureMessages(List<String> failureMessages) {
+        if (this.failureMessages != null && failureMessages != null) {
+            // Add all non-empty failure messages passed in as a param to our object instance property's failure messages list
+            this.failureMessages.addAll(failureMessages.stream().filter(message -> !message.isEmpty()).toList());
+        }
+        // if our obj has no failure messages, simply assign param to obj's failure messages
+        if (this.failureMessages == null) {
+            this.failureMessages = failureMessages;
+        }
+    }
+
+    /* Validation Methods*/
     public void validateOrder() {
         validateInitialOrder();
         validatTotalPrice();
         validateItemsPrice();
     }
+
 
     private void validateItemsPrice() {
         Money orderItemsTotal = items.stream().map(orderItem -> {
@@ -62,13 +115,6 @@ public class Order extends AggregateRoot<OrderId> {
     private void validateInitialOrder() {
         if (orderStatus != null || getId() != null) {
             throw new OrderDomainException("Order is not in correct state for initialization!");
-        }
-    }
-
-    private void initializeOrderItems(){
-        long itemId = 1;
-        for (OrderItem orderItem: items) {
-            orderItem.initializeOrderItem(super.getId(), new OrderItemId(itemId++));
         }
     }
 
