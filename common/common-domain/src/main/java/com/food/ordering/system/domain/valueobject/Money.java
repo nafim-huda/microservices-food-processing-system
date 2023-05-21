@@ -12,6 +12,9 @@ public class Money {
         this.amount = amount;
     }
 
+    /* Best Practice:
+    *   - use comapareTo() for comparing BigDecimal values
+    * */
     public boolean isGreaterThanZero() {
         return this.amount != null && this.amount.compareTo(BigDecimal.ZERO) > 0;
     }
@@ -50,7 +53,8 @@ public class Money {
     }
 
     // setScale() will round every BigDecimal calculation
-    // purpose is to eliminate repeating numbers
+    // purpose is to eliminate repeating numbers that could cause problems for performing
+    // other computations
     private BigDecimal setScale(BigDecimal input){
         return input.setScale(2, RoundingMode.HALF_EVEN);
     }

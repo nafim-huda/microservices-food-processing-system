@@ -10,6 +10,7 @@ import java.util.List;
 
 /* Serves to create event objects that will be passed to Kafka, but does NOT actually fire the events
 *   (order-application-service will be responsible for the "when" part regarding events)
+* Exposes our domain events to our application service
 * */
 public interface OrderDomainService {
 
