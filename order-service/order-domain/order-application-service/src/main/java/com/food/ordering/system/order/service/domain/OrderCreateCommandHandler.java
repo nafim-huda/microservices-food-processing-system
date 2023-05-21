@@ -15,7 +15,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
-import javax.swing.text.html.Option;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -33,17 +32,20 @@ public class OrderCreateCommandHandler {
 
     private final OrderDataMapper orderDataMapper;
 
-    public OrderCreateCommandHandler(OrderDomainService orderDomainService, OrderRepository orderRepository, CustomerRepository customerRepository, RestaurantRepository restaurantRepository, OrderDataMapper orderDataMapper) {
+    private final ApplicationDomainEventPublisher applicationDomainEventPublisher;
+
+    public OrderCreateCommandHandler(OrderDomainService orderDomainService, OrderRepository orderRepository, CustomerRepository customerRepository, RestaurantRepository restaurantRepository, OrderDataMapper orderDataMapper, ApplicationDomainEventPublisher applicationDomainEventPublisher) {
         this.orderDomainService = orderDomainService;
         this.orderRepository = orderRepository;
         this.customerRepository = customerRepository;
         this.restaurantRepository = restaurantRepository;
         this.orderDataMapper = orderDataMapper;
+        this.applicationDomainEventPublisher = applicationDomainEventPublisher;
     }
 
     @Transactional
     public CreateOrderResponse createOrder(CreateOrderCommand createOrderCommand) {
-        /* Validation First */
+        /* Validation  */
         checkCustomer(createOrderCommand.getCustomerId());
         Restaurant restaurant = checkRestaurant(createOrderCommand);
         /* Create the order from the createOrderCommand */
@@ -53,6 +55,8 @@ public class OrderCreateCommandHandler {
         Order orderResult = saveOrder(order);
         /* Return a response to the client -> convert orderResult to a createOrderResponse obj */
         log.info("Order is created with id: {]", orderResult.getId().getValue());
+        /* Call publishEvent() from our applicationDomainEventPublisher */
+        applicationDomainEventPublisher.publish(orderCreatedEvent);
         return orderDataMapper.orderToCreateOrderResponse(orderResult);
 
     }
